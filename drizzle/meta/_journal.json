@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1794227205609,
+      "tag": "0000_certain_tomorrow_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1794229173245,
+      "tag": "0001_panoramic_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1794229625900,
+      "tag": "0002_wise_leader",
+      "breakpoints": true
+    }
+  ]
+}

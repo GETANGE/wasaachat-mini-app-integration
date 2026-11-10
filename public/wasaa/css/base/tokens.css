@@ -1,0 +1,62 @@
+:root {
+  /* Warm neutral base, dark forest green accent (from the VIVA mockup).
+     The design is light-only: it stays the same when the device is in dark mode. */
+  --bg: #f5f2ec;
+  --surface: #ffffff;
+  --surface-2: #f3f1ed;
+  --surface-3: #e8e4dc;
+  --line: #ebe6dd;
+
+  --ink: #1c211e;
+  --muted: #6b6e69;
+
+  --brand: #133a28;
+  --brand-hover: #0e2c1e;
+  --brand-ink: #ffffff;
+  --brand-soft: #e3eadc;
+  --footer-bg: #0f2c1f;
+  --footer-ink: #f1f3ef;
+  --footer-muted: #b3bfb7;
+
+  --price: #b42318;
+  --sale: #ef5f50;
+  --star: #f3a712;
+  --gold: #e2d590;
+  --sage-btn: #dfe7cc;
+  --accent: #b9761b;
+  --accent-soft: #f8eedc;
+  --danger: #b42318;
+  --danger-soft: #fbe3df;
+  --info: #2d5b9a;
+  --info-soft: #e0e9f6;
+
+  /* hero + promo tiles */
+  --hero-bg: #ece5d8;
+  --hero-bg-2: #f4efe6;
+  --tint-green: #e1e9d6;
+  --tint-sand: #f2e6d8;
+  --tint-sky: #dfeaf5;
+
+  /* category circle pastels */
+  --pastel-1: #dbe9f7;
+  --pastel-2: #fbe1df;
+  --pastel-3: #fde9d6;
+  --pastel-4: #fbe3e6;
+  --pastel-5: #dde8f3;
+  --pastel-6: #fce6dc;
+  --pastel-7: #ece4f3;
+  --pastel-8: #e3e9f0;
+
+  --shadow-sm: 0 1px 2px rgb(28 33 30 / 6%);
+  --shadow: 0 1px 3px rgb(28 33 30 / 6%), 0 6px 18px rgb(28 33 30 / 6%);
+  --radius: 16px;
+  --radius-sm: 12px;
+  --container: 1200px;
+  --tabbar-h: 64px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Nexa everywhere (see base/fonts.css); system font until the files are added. */
+  --font: "Nexa", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-serif: var(--font); /* headings: same family, used at heavier weights */
+  color-scheme: light;
+}

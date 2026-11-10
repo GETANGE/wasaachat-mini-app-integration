@@ -1,0 +1,85 @@
+/* Payment status */
+
+.pay-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 20px 8px 8px;
+  text-align: center;
+}
+
+.pay-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+}
+
+.pay-icon.ok { background: var(--brand-soft); color: var(--brand); }
+.pay-icon.bad { background: var(--danger-soft); color: var(--danger); }
+.pay-icon.wait { background: var(--accent-soft); color: var(--accent); }
+
+.pay-amount {
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pay-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.pay-detail {
+  max-width: 300px;
+  color: var(--muted);
+}
+
+.steps {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+  margin: 8px auto 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.steps li::before {
+  content: "";
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+}
+
+.steps li[data-state="active"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.steps li[data-state="active"]::before {
+  border-color: var(--accent);
+  border-top-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+.steps li[data-state="done"] {
+  color: var(--ink);
+}
+
+.steps li[data-state="done"]::before {
+  border-color: var(--brand);
+  background: var(--brand) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 8 3 3 5-6' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat;
+}

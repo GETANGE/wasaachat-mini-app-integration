@@ -1,0 +1,44 @@
+{
+  "name": "mini-app-integration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "dev:worker": "bun --watch src/workers/index.ts",
+    "worker": "bun src/workers/index.ts",
+    "start": "bun src/index.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "bun run scripts/seed.ts"
+  },
+  "dependencies": {
+    "bullmq": "6.7.2",
+    "cors": "^2.8.5",
+    "drizzle-orm": "0.45.4",
+    "express": "^5.1.0",
+    "express-rate-limit": "8.7.3",
+    "helmet": "^8.1.0",
+    "ioredis": "6.0.0",
+    "jsonwebtoken": "9.0.3",
+    "morgan": "1.12.1",
+    "mysql2": "3.24.6",
+    "winston": "3.19.0",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.21",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "9.0.10",
+    "@types/morgan": "1.9.10",
+    "@types/node": "^24.3.0",
+    "drizzle-kit": "0.31.11",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <title>VIVA — Live Better</title>
+    <link rel="stylesheet" href="./css/main.css" />
+  </head>
+  <body>
+    <!-- Boot / blocking states (loading, not in WasaaChat, sign-in failed) -->
+    <div id="boot" class="boot" role="status" aria-live="polite">
+      <div id="boot-brand" class="boot-brand"></div>
+      <p id="boot-title" class="boot-title">Opening the shop…</p>
+      <p id="boot-detail" class="boot-detail"></p>
+      <div id="boot-spinner" class="spinner" aria-hidden="true"></div>
+      <button id="boot-retry" class="btn btn-primary" type="button" hidden>Try again</button>
+    </div>
+
+    <div id="app" class="app" hidden>
+      <div id="announce" class="announce"></div>
+
+      <header class="site-header">
+        <div class="container header-main">
+          <a href="#" id="header-brand" class="header-brand" data-goto="home" aria-label="Home"></a>
+
+          <form id="search-form" class="search" role="search">
+            <input id="search" type="search" placeholder="Search products, brands and more…" aria-label="Search products" autocomplete="off" enterkeyhint="search" />
+            <button type="submit" class="search-btn" aria-label="Search">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </form>
+
+          <nav class="header-actions" aria-label="Account">
+            <a href="#" class="action" data-goto="orders">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span class="action-label">Account</span>
+            </a>
+            <a href="#" class="action" data-goto="wishlist" aria-label="Wishlist">
+              <span class="action-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.1A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                <span class="badge" data-wishlist-count hidden>0</span>
+              </span>
+              <span class="action-label">Wishlist</span>
+            </a>
+            <a href="#" id="header-cart" class="action" data-goto="cart" aria-label="Cart">
+              <span class="action-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 4h2.5l2.2 11h10.6L20.5 8H7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="19.5" r="1.3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                <span class="badge" data-cart-count hidden>0</span>
+              </span>
+              <span class="action-label">Cart</span>
+            </a>
+          </nav>
+        </div>
+
+        <div class="container header-nav">
+          <div class="cat-menu-wrap">
+            <button id="cat-toggle" type="button" class="cat-toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="cat-menu">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              All Categories
+            </button>
+            <div id="cat-menu" class="cat-menu" role="menu" hidden></div>
+          </div>
+          <nav id="main-nav" class="main-nav" aria-label="Main"></nav>
+        </div>
+      </header>
+
+      <main class="container main">
+        <div id="notice" class="notice" hidden></div>
+
+        <!-- HOME (rendered by js/features/home) -->
+        <div id="view-home" class="view home" data-view="home"></div>
+
+        <!-- SHOP LISTING -->
+        <section class="view" data-view="shop" hidden>
+          <div class="page-head">
+            <div>
+              <h1 id="shop-title" class="page-title">All Products</h1>
+              <p id="shop-sub" class="page-sub"></p>
+            </div>
+          </div>
+          <div id="shop-chips" class="chips" aria-label="Categories"></div>
+          <div id="products" class="product-grid" aria-busy="true"></div>
+          <p id="products-empty" class="empty" hidden></p>
+          <button id="load-more" class="btn btn-ghost load-more" type="button" hidden>Show more</button>
+        </section>
+
+        <!-- PRODUCT DETAIL (rendered by js/features/product) -->
+        <div id="view-product" class="view pdp-view" data-view="product" hidden></div>
+
+        <!-- WISHLIST -->
+        <section class="view" data-view="wishlist" hidden>
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Wishlist</h1>
+              <p id="wishlist-sub" class="page-sub"></p>
+            </div>
+          </div>
+          <div id="wishlist-items" class="product-grid"></div>
+          <div id="wishlist-empty" class="empty-state" hidden>
+            <p class="empty-title">Nothing saved yet</p>
+            <p class="empty-detail">Tap the heart on any product to keep it here for later.</p>
+            <a href="#" class="btn btn-primary" data-goto="shop">Browse products</a>
+          </div>
+        </section>
+
+        <!-- CART -->
+        <section class="view" data-view="cart" hidden>
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Shopping Cart</h1>
+              <p id="cart-sub" class="page-sub"></p>
+            </div>
+          </div>
+          <div class="cart-layout">
+            <section id="cart-items" class="list" aria-label="Cart items"></section>
+            <section id="cart-summary" class="summary card" aria-label="Order summary" hidden>
+              <h2 class="summary-title">Order Summary</h2>
+              <dl class="totals">
+                <div><dt>Subtotal</dt><dd id="cart-subtotal"></dd></div>
+                <div><dt>Delivery</dt><dd id="cart-shipping"></dd></div>
+                <div class="total"><dt>Total</dt><dd id="cart-total"></dd></div>
+              </dl>
+              <button id="cart-checkout" class="btn btn-primary btn-block" type="button">Checkout</button>
+            </section>
+          </div>
+          <div id="cart-empty" class="empty-state" hidden>
+            <p class="empty-title">Your cart is empty</p>
+            <p class="empty-detail">Add something from the shop and it will show up here.</p>
+            <a href="#" class="btn btn-primary" data-goto="shop">Browse products</a>
+          </div>
+        </section>
+
+        <!-- ORDERS -->
+        <section class="view" data-view="orders" hidden>
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">My Orders</h1>
+              <p class="page-sub">Track payment and delivery for everything you’ve bought.</p>
+            </div>
+            <button id="sign-out" type="button" class="btn btn-ghost sign-out">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Sign out
+            </button>
+          </div>
+          <section id="orders" class="list" aria-label="Your orders"></section>
+          <div id="orders-empty" class="empty-state" hidden>
+            <p class="empty-title">No orders yet</p>
+            <p class="empty-detail">Orders you place will appear here with their payment and delivery status.</p>
+            <a href="#" class="btn btn-primary" data-goto="shop">Start shopping</a>
+          </div>
+        </section>
+      </main>
+
+      <footer id="site-footer" class="site-footer"></footer>
+
+      <!-- Mobile bottom navigation -->
+      <nav class="tabbar" aria-label="Sections">
+        <a href="#" class="tab" data-goto="home">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <span>Home</span>
+        </a>
+        <a href="#" class="tab" data-goto="shop">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 10 5.5 4h13L20 10M4 10h16M4 10v10h16V10M9 20v-5h6v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <span>Shop</span>
+        </a>
+        <a href="#" class="tab" data-goto="wishlist">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.1A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <span>Wishlist</span>
+          <span class="badge" data-wishlist-count hidden>0</span>
+        </a>
+        <a href="#" class="tab" data-goto="cart">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 4h2.5l2.2 11h10.6L20.5 8H7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="19.5" r="1.3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+          <span>Cart</span>
+          <span class="badge" data-cart-count hidden>0</span>
+        </a>
+        <a href="#" class="tab" data-goto="orders">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8h6M9 12h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Orders</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Bottom sheet (product detail, checkout, payment, order detail) -->
+    <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+    <section id="sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="sheet-head">
+        <h2 id="sheet-title"></h2>
+        <button id="sheet-close" class="icon-btn" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div id="sheet-body" class="sheet-body"></div>
+      <footer id="sheet-foot" class="sheet-foot"></footer>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="https://wasaachat.com/sdk/wasaa-bridge.v2.js"></script>
+    <script src="./js/main.js" type="module"></script>
+  </body>
+</html>

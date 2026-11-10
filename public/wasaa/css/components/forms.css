@@ -1,0 +1,75 @@
+/* Forms */
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.field input:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.field .hint {
+  font-weight: 400;
+}
+
+.mini-lines {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.mini-lines > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mini-lines span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-lines span:last-child {
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.address {
+  font-style: normal;
+  color: var(--muted);
+}

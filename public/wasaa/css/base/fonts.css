@@ -1,0 +1,44 @@
+/* Nexa (Fontfabric) — self-hosted. The page's Content-Security-Policy only
+   allows fonts from this site, so the files must live in public/wasaa/fonts/.
+   Each weight uses a copy installed on the device first, then the files below.
+   Until the files are added, text falls back to the system font. */
+
+@font-face {
+  font-family: "Nexa";
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: local("Nexa Light"), local("Nexa-Light"),
+    url("../../fonts/Nexa-Light.woff2") format("woff2"),
+    url("../../fonts/Nexa-Light.otf") format("opentype");
+}
+
+@font-face {
+  font-family: "Nexa";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: local("Nexa Regular"), local("Nexa-Regular"), local("Nexa Book"),
+    url("../../fonts/Nexa-Regular.woff2") format("woff2"),
+    url("../../fonts/Nexa-Regular.otf") format("opentype");
+}
+
+@font-face {
+  font-family: "Nexa";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: local("Nexa Bold"), local("Nexa-Bold"),
+    url("../../fonts/Nexa-Bold.woff2") format("woff2"),
+    url("../../fonts/Nexa-Bold.otf") format("opentype");
+}
+
+@font-face {
+  font-family: "Nexa";
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: local("Nexa XBold"), local("Nexa-XBold"), local("Nexa Heavy"),
+    url("../../fonts/Nexa-XBold.woff2") format("woff2"),
+    url("../../fonts/Nexa-XBold.otf") format("opentype");
+}

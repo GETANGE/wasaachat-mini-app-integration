@@ -1,0 +1,116 @@
+.thumb {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumb {
+  background: var(--surface-2);
+}
+
+/* ---------- Lists (cart, orders) ---------- */
+
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.totals {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.totals dt {
+  color: var(--muted);
+}
+
+.totals dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.totals .total {
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.totals .total dt,
+.totals .total dd {
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.free {
+  color: var(--brand);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pill[data-status="pending"] { background: var(--accent-soft); color: var(--accent); }
+.pill[data-status="paid"],
+.pill[data-status="delivered"] { background: var(--brand-soft); color: var(--brand); }
+.pill[data-status="shipped"] { background: var(--info-soft); color: var(--info); }
+.pill[data-status="cancelled"],
+.pill[data-status="refunded"] { background: var(--surface-2); color: var(--muted); }
+
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Product without a photo: quiet neutral tile with the category icon. */
+.thumb.is-placeholder,
+.thumb.is-placeholder[data-tone] {
+  background: linear-gradient(160deg, var(--surface-2), var(--surface-3));
+  color: color-mix(in srgb, var(--ink) 28%, transparent);
+}
