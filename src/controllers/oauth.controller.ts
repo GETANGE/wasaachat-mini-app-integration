@@ -11,7 +11,6 @@ import {
   WEB_SESSION_SECONDS,
 } from "../services/wasaachat-oauth.service.ts";
 import { clearCookie, readCookie, setCookie } from "../utils/cookies.ts";
-import { NotFoundError } from "../utils/errors.ts";
 
 // GET /auth/wasaachat?returnTo=/wasaa/
 export function start(req: Request, res: Response) {
@@ -47,11 +46,11 @@ export async function callback(req: Request, res: Response, _next: NextFunction)
   }
 }
 
-// GET /api/wasaa/me — who is signed in (works with the web cookie or an in-app session).
+// GET /api/wasaa/me — who is signed in (web cookie or in-app session).
+// { user: null } when nobody is; that's not an error.
 export async function me(req: Request, res: Response) {
-  const user = await userRepository.findPublicById(req.user!.id);
-  if (!user) throw new NotFoundError("User not found");
-  res.json({ user });
+  const user = req.user ? await userRepository.findPublicById(req.user.id) : null;
+  res.json({ user: user ?? null });
 }
 
 // POST /api/wasaa/logout — ends the web session on this browser.

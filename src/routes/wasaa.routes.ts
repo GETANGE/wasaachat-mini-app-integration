@@ -1,7 +1,7 @@
 import { type RequestHandler, Router } from "express";
 import { logout, me } from "../controllers/oauth.controller.ts";
 import { deauthorize, session, webhook } from "../controllers/wasaa.controller.ts";
-import { requireAuth } from "../middleware/auth.ts";
+import { optionalAuth } from "../middleware/auth.ts";
 import { wasaaSessionRateLimiter } from "../middleware/rateLimiter.ts";
 import { validateBody } from "../middleware/validate.ts";
 import { launchSessionSchema } from "../validators/wasaa.validator.ts";
@@ -15,7 +15,8 @@ router.post(
   validateBody(launchSessionSchema),
   session,
 );
-router.get("/me", requireAuth, me);
+// "Who is signed in?" — { user: null } when nobody is, so the page can ask freely.
+router.get("/me", optionalAuth, me);
 router.post("/logout", logout);
 router.post("/webhook", webhook);
 // Sign in with WasaaChat: register this as the deauthorize URL in the console.

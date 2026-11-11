@@ -84,15 +84,23 @@ describe("routes and sessions", () => {
     const web = signToken({ uid: 5, role: "customer", kind: "web" }, 3600);
     const appToken = signToken({ uid: 5, role: "customer", kind: "app" }, 3600);
 
-    const before = await fetch(`${base}/api/wasaa/me`, { headers: { cookie: `viva_session=${web}` } });
-    expect(before.status).toBe(200);
+    const whoAmI = async (headers: Record<string, string>) =>
+      ((await (await fetch(`${base}/api/wasaa/me`, { headers })).json()) as { user: { id: number } | null }).user;
+
+    expect((await whoAmI({ cookie: `viva_session=${web}` }))?.id).toBe(5);
 
     revocations.set(5, new Date(Date.now() + 1000)); // disconnected after the token was issued
-    const after = await fetch(`${base}/api/wasaa/me`, { headers: { cookie: `viva_session=${web}` } });
-    expect(after.status).toBe(401);
+    expect(await whoAmI({ cookie: `viva_session=${web}` })).toBeNull();
+    // Protected routes refuse the revoked session outright.
+    expect((await fetch(`${base}/api/cart`, { headers: { cookie: `viva_session=${web}` } })).status).toBe(401);
 
-    const inApp = await fetch(`${base}/api/wasaa/me`, { headers: { authorization: `Bearer ${appToken}` } });
-    expect(inApp.status).toBe(200);
+    expect((await whoAmI({ authorization: `Bearer ${appToken}` }))?.id).toBe(5);
+  });
+
+  test("/api/wasaa/me with no session is a normal answer, not a 401", async () => {
+    const res = await fetch(`${base}/api/wasaa/me`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ user: null });
   });
 });
 

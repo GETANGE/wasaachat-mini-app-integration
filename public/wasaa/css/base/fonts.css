@@ -1,16 +1,18 @@
-/* Nexa (Fontfabric) — self-hosted. The page's Content-Security-Policy only
-   allows fonts from this site, so the files must live in public/wasaa/fonts/.
-   Each weight uses a copy installed on the device first, then the files below.
-   Until the files are added, text falls back to the system font. */
+/* Nexa (Fontfabric) — used when it's installed on the device; otherwise the
+   page falls back to the system font (see --font in tokens.css).
+
+   To serve Nexa to everyone, add your licensed files to public/wasaa/fonts/
+   and append a url() after the local() sources in each rule, e.g.
+     src: local("Nexa Bold"), local("Nexa-Bold"),
+       url("../../fonts/Nexa-Bold.woff2") format("woff2");
+   Only reference files that exist, or browsers log 404s. */
 
 @font-face {
   font-family: "Nexa";
   font-weight: 300;
   font-style: normal;
   font-display: swap;
-  src: local("Nexa Light"), local("Nexa-Light"),
-    url("../../fonts/Nexa-Light.woff2") format("woff2"),
-    url("../../fonts/Nexa-Light.otf") format("opentype");
+  src: local("Nexa Light"), local("Nexa-Light");
 }
 
 @font-face {
@@ -18,9 +20,7 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  src: local("Nexa Regular"), local("Nexa-Regular"), local("Nexa Book"),
-    url("../../fonts/Nexa-Regular.woff2") format("woff2"),
-    url("../../fonts/Nexa-Regular.otf") format("opentype");
+  src: local("Nexa Regular"), local("Nexa-Regular"), local("Nexa Book");
 }
 
 @font-face {
@@ -28,9 +28,7 @@
   font-weight: 700;
   font-style: normal;
   font-display: swap;
-  src: local("Nexa Bold"), local("Nexa-Bold"),
-    url("../../fonts/Nexa-Bold.woff2") format("woff2"),
-    url("../../fonts/Nexa-Bold.otf") format("opentype");
+  src: local("Nexa Bold"), local("Nexa-Bold");
 }
 
 @font-face {
@@ -38,7 +36,5 @@
   font-weight: 800;
   font-style: normal;
   font-display: swap;
-  src: local("Nexa XBold"), local("Nexa-XBold"), local("Nexa Heavy"),
-    url("../../fonts/Nexa-XBold.woff2") format("woff2"),
-    url("../../fonts/Nexa-XBold.otf") format("opentype");
+  src: local("Nexa XBold"), local("Nexa-XBold"), local("Nexa Heavy");
 }

@@ -39,6 +39,7 @@ async function signInInApp() {
 async function existingWebSession() {
   try {
     const { user } = await api.me();
+    if (!user) return null;
     setSession({ web: true });
     return user;
   } catch {
