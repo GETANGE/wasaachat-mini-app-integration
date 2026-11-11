@@ -11,7 +11,12 @@ export function errorMessage(error) {
   // Bridge errors carry a readable error_description (e.g. "Mini-app payments
   // are temporarily unavailable. Nothing was charged").
   if (typeof error?.error_description === "string" && error.error_description) return error.error_description;
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    // Some hosts put the code in front ("invalid_request: This app is not set
+    // up to accept payments."); shoppers only need the sentence.
+    const code = typeof error.error === "string" ? error.error : "";
+    return code && error.message.startsWith(`${code}: `) ? error.message.slice(code.length + 2) : error.message;
+  }
   return "Something went wrong. Try again.";
 }
 

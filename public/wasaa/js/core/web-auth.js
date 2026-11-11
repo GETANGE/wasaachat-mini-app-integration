@@ -17,7 +17,13 @@ export function takeSignInResult() {
   const url = new URL(location.href);
   const result = url.searchParams.get("signin");
   if (!result) return null;
+  // why= is a short code from the server saying which step failed, e.g.
+  // token_invalid_client. Shown small so it can be read back to support.
+  const why = (url.searchParams.get("why") ?? "").replace(/[^a-z0-9_]/gi, "").slice(0, 40);
   url.searchParams.delete("signin");
+  url.searchParams.delete("why");
   history.replaceState(history.state, "", url.pathname + (url.search || "") + url.hash);
-  return RESULT_MESSAGES[result] ?? null;
+  const message = RESULT_MESSAGES[result] ?? null;
+  if (why) console.warn(`[signin] ${result}: ${why}`);
+  return message && why ? `${message} (${why})` : message;
 }

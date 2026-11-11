@@ -28,7 +28,8 @@ function env(name: string): string {
   return value;
 }
 
-const apiBase = () => process.env.WASAA_BASE ?? DEFAULT_BASE;
+// A trailing slash in WASAA_BASE would break the issuer check and the URLs.
+const apiBase = () => (process.env.WASAA_BASE || DEFAULT_BASE).replace(/\/+$/, "");
 const issuer = () => `${apiBase()}/identity/oauth`;
 
 function oauthConfig() {
@@ -41,6 +42,18 @@ function oauthConfig() {
 }
 
 const b64url = (buf: Buffer) => buf.toString("base64url");
+
+// A sign-in that failed after WasaaChat sent the user back. `reason` is a short
+// code (no secrets) that the callback passes to the page, so a failure on a
+// server whose logs you can't see still says which step broke.
+export class SignInFailed extends UnauthorizedError {
+  constructor(
+    public readonly reason: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 // Only send people back into the shop, never to another site.
 export function safeReturnTo(value: unknown): string {
@@ -103,11 +116,12 @@ export async function redeemCode(code: string, verifier: string): Promise<TokenR
   const json = await readJson(response);
 
   if (!response.ok || typeof json?.access_token !== "string") {
-    logger.warn("WasaaChat token exchange failed", { status: response.status, error: json?.error });
-    throw new UnauthorizedError("WasaaChat sign-in failed");
+    const error = typeof json?.error === "string" ? json.error : `http_${response.status}`;
+    logger.warn("WasaaChat token exchange failed", { status: response.status, error, description: json?.error_description });
+    throw new SignInFailed(`token_${error}`, "WasaaChat sign-in failed");
   }
   if (!String(json.scope ?? "").split(" ").includes("openid")) {
-    throw new UnauthorizedError("WasaaChat sign-in did not include your identity");
+    throw new SignInFailed("no_openid", "WasaaChat sign-in did not include your identity");
   }
   return json as unknown as TokenResponse;
 }
@@ -116,22 +130,29 @@ export async function redeemCode(code: string, verifier: string): Promise<TokenR
 // with our client secret, so (per OpenID Connect Core §3.1.3.7) we check its
 // claims — issuer, audience, expiry and our nonce — without fetching the JWKS.
 export function checkIdToken(idToken: string | undefined, nonce: string): string {
-  if (!idToken) throw new UnauthorizedError("WasaaChat did not return an ID token");
+  if (!idToken) throw new SignInFailed("id_token_missing", "WasaaChat did not return an ID token");
   let claims: Record<string, unknown>;
   try {
     claims = JSON.parse(Buffer.from(idToken.split(".")[1] ?? "", "base64url").toString("utf8"));
   } catch {
-    throw new UnauthorizedError("WasaaChat returned an unreadable ID token");
+    throw new SignInFailed("id_token_unreadable", "WasaaChat returned an unreadable ID token");
   }
   const { clientId } = oauthConfig();
   const audienceOk = Array.isArray(claims.aud) ? claims.aud.includes(clientId) : claims.aud === clientId;
   const now = Math.floor(Date.now() / 1000);
 
-  if (claims.iss !== issuer() || !audienceOk || typeof claims.exp !== "number" || claims.exp < now || claims.nonce !== nonce || typeof claims.sub !== "string") {
-    logger.warn("WasaaChat ID token rejected", { iss: claims.iss, aud: claims.aud, expired: Number(claims.exp) < now, nonceMatches: claims.nonce === nonce });
-    throw new UnauthorizedError("WasaaChat sign-in could not be verified");
+  const problem =
+    claims.iss !== issuer() ? "id_token_iss"
+    : !audienceOk ? "id_token_aud"
+    : typeof claims.exp !== "number" || claims.exp < now ? "id_token_exp"
+    : claims.nonce !== nonce ? "id_token_nonce"
+    : typeof claims.sub !== "string" ? "id_token_sub"
+    : null;
+  if (problem) {
+    logger.warn("WasaaChat ID token rejected", { problem, iss: claims.iss, expectedIss: issuer(), aud: claims.aud });
+    throw new SignInFailed(problem, "WasaaChat sign-in could not be verified");
   }
-  return claims.sub;
+  return claims.sub as string;
 }
 
 type UserInfo = { sub: string; display_name?: string; name?: string; avatar_url?: string; picture?: string };
@@ -143,8 +164,8 @@ export async function fetchUserInfo(accessToken: string): Promise<UserInfo> {
   });
   const json = await readJson(response);
   if (!response.ok || typeof json?.sub !== "string") {
-    logger.warn("WasaaChat userinfo failed", { status: response.status });
-    throw new AppError(502, "Could not read your WasaaChat profile");
+    logger.warn("WasaaChat userinfo failed", { status: response.status, error: json?.error });
+    throw new SignInFailed(`userinfo_${response.status}`, "Could not read your WasaaChat profile");
   }
   return json as unknown as UserInfo;
 }
@@ -163,22 +184,28 @@ export class SignInDeclined extends Error {
 export async function finishSignIn(query: Record<string, unknown>, stateCookie: string | undefined) {
   const pending = unseal<PendingSignIn>(stateCookie);
   if (!pending) throw new BadRequestError("Your sign-in took too long or was started in another browser. Please try again.");
-  if (query.state !== pending.state) throw new BadRequestError("Sign-in response did not match this browser. Please try again.");
+  if (query.state !== pending.state) throw new SignInFailed("state_mismatch", "Sign-in response did not match this browser. Please try again.");
 
   if (typeof query.error === "string") {
     // access_denied: the user declined on the consent screen.
     throw new SignInDeclined(query.error, pending.returnTo);
   }
-  if (typeof query.code !== "string" || !query.code) throw new BadRequestError("WasaaChat did not return a sign-in code");
+  if (typeof query.code !== "string" || !query.code) throw new SignInFailed("no_code", "WasaaChat did not return a sign-in code");
 
   const tokens = await redeemCode(query.code, pending.verifier);
   const sub = checkIdToken(tokens.id_token, pending.nonce);
   const profile = await fetchUserInfo(tokens.access_token);
-  if (profile.sub !== sub) throw new UnauthorizedError("WasaaChat sign-in could not be verified");
+  if (profile.sub !== sub) throw new SignInFailed("sub_mismatch", "WasaaChat sign-in could not be verified");
 
   // sub is the same id as the mini-app's open_user_id, so web and in-app
   // purchases land on one account.
-  const user = await upsertWasaaUser(sub, (profile.display_name ?? profile.name ?? "").trim() || null);
+  let user: Awaited<ReturnType<typeof upsertWasaaUser>>;
+  try {
+    user = await upsertWasaaUser(sub, (profile.display_name ?? profile.name ?? "").trim() || null);
+  } catch (err) {
+    logger.error("Saving the WasaaChat user failed", { error: err instanceof Error ? err.message : String(err) });
+    throw new SignInFailed("save_user", "Could not save your account");
+  }
   return {
     user,
     returnTo: pending.returnTo,

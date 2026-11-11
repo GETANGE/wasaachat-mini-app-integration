@@ -5,6 +5,7 @@ import {
   finishSignIn,
   SESSION_COOKIE,
   SignInDeclined,
+  SignInFailed,
   startSignIn,
   STATE_COOKIE,
   STATE_TTL_SECONDS,
@@ -38,11 +39,17 @@ export async function callback(req: Request, res: Response, _next: NextFunction)
     res.redirect(302, returnTo);
   } catch (err) {
     if (err instanceof SignInDeclined) {
-      res.redirect(302, `/wasaa/?signin=${err.reason === "access_denied" ? "declined" : "failed"}`);
+      const declined = err.reason === "access_denied";
+      res.redirect(302, `/wasaa/?signin=${declined ? "declined" : `failed&why=${encodeURIComponent(err.reason)}`}`);
       return;
     }
-    logger.warn("Sign in with WasaaChat failed", { error: err instanceof Error ? err.message : String(err) });
-    res.redirect(302, `/wasaa/?signin=${stateCookie ? "failed" : "expired"}`);
+    if (!stateCookie) {
+      res.redirect(302, "/wasaa/?signin=expired");
+      return;
+    }
+    const why = err instanceof SignInFailed ? err.reason : err instanceof Error && err.name === "TimeoutError" ? "timeout" : "server";
+    logger.warn("Sign in with WasaaChat failed", { why, error: err instanceof Error ? err.message : String(err) });
+    res.redirect(302, `/wasaa/?signin=failed&why=${encodeURIComponent(why)}`);
   }
 }
 

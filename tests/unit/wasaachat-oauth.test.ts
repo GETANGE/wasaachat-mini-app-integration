@@ -95,6 +95,19 @@ describe("code exchange", () => {
     expect(() => checkIdToken(idToken({ ...good, exp: 1 }), "n1")).toThrow();
     expect(() => checkIdToken(undefined, "n1")).toThrow();
   });
+
+  test("a trailing slash on WASAA_BASE doesn't break the issuer check", () => {
+    process.env.WASAA_BASE = "https://api.example.test/core/";
+    const good = { iss: "https://api.example.test/core/identity/oauth", aud: "app-123", exp: Math.floor(Date.now() / 1000) + 300, nonce: "n1", sub: "user-1" };
+    expect(checkIdToken(idToken(good), "n1")).toBe("user-1");
+  });
+
+  test("failures carry a reason code", async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ error: "invalid_client" }), { status: 401 })) as unknown as typeof fetch;
+    await expect(redeemCode("c", "v".repeat(64))).rejects.toMatchObject({ reason: "token_invalid_client" });
+    const good = { iss: "https://api.example.test/core/identity/oauth", aud: "app-123", exp: Math.floor(Date.now() / 1000) + 300, nonce: "n1", sub: "u" };
+    expect(() => checkIdToken(idToken({ ...good, iss: "https://evil" }), "n1")).toThrow(expect.objectContaining({ reason: "id_token_iss" }));
+  });
 });
 
 describe("routes", () => {
@@ -121,7 +134,7 @@ describe("routes", () => {
     const start = await fetch(`${base}/auth/wasaachat`, { redirect: "manual" });
     const cookie = (start.headers.get("set-cookie") ?? "").split(";")[0]!;
     const res = await fetch(`${base}/auth/wasaachat/callback?code=c&state=wrong`, { redirect: "manual", headers: { cookie } });
-    expect(res.headers.get("location")).toBe("/wasaa/?signin=failed");
+    expect(res.headers.get("location")).toBe("/wasaa/?signin=failed&why=state_mismatch");
   });
 
   test("declining on the consent screen comes back as declined", async () => {
