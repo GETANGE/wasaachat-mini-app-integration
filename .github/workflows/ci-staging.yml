@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Gitleaks (no-git, working tree)
         run: |
@@ -101,7 +101,7 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
         with:
@@ -121,7 +121,7 @@ jobs:
       version_tag: ${{ steps.version.outputs.tag }}
       image: ${{ steps.version.outputs.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Generate version tag
         id: version
@@ -170,7 +170,7 @@ jobs:
           timeout: '10m'
 
       - name: Upload Trivy image SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
         with:
@@ -195,7 +195,7 @@ jobs:
           fi
 
       - name: Checkout Helm Charts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ env.HELM_REPO }}
           ref: ${{ env.HELM_BRANCH }}
@@ -211,7 +211,12 @@ jobs:
             [ -z "$chart" ] && continue
             values="helm-charts/${chart}/values.yaml"
             [ -f "$values" ] || { echo "::error::$values not found"; exit 1; }
-            IMAGE="$IMAGE" TAG="$TAG" yq -i ".${key}.image.repository = strenv(IMAGE) | .${key}.image.tag = strenv(TAG)" "$values"
+            # yq drops blank lines; apply only its real changes so the chart
+            # file keeps its formatting.
+            IMAGE="$IMAGE" TAG="$TAG" yq ".${key}.image.repository = strenv(IMAGE) | .${key}.image.tag = strenv(TAG)" "$values" > /tmp/values.new
+            changes=$(diff -U0 -B "$values" /tmp/values.new || true)
+            if [ -n "$changes" ]; then printf '%s\n' "$changes" | patch -s "$values"; fi
+            [ "$(yq ".${key}.image.tag" "$values")" = "$TAG" ] || { echo "::error::bump failed for $values"; exit 1; }
             echo "$values → $(yq ".${key}.image.repository + \":\" + .${key}.image.tag" "$values")"
           done
 
