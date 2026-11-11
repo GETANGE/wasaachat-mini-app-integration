@@ -30,6 +30,11 @@ app.get("/", (_req, res) => {
   res.redirect(302, "/wasaa/");
 });
 
+// Privacy policy (registered as the app's privacy_policy_url in WasaaChat).
+app.get("/privacy", (_req, res) => {
+  res.redirect(302, "/wasaa/privacy.html");
+});
+
 app.use("/api", apiRateLimiter, routes);
 app.use("/auth", oauthRoutes);
 app.use(

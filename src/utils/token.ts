@@ -4,7 +4,11 @@ import { UnauthorizedError } from "./errors.ts";
 export type TokenPayload = {
   uid: number;
   role: "customer" | "admin";
+  // "web" = Sign in with WasaaChat in a browser; "app" = launch code inside WasaaChat.
+  kind?: "web" | "app";
 };
+
+export type VerifiedToken = TokenPayload & { issuedAt: number };
 
 function getSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -23,7 +27,7 @@ export function signToken(payload: TokenPayload, expiresInSeconds?: number): str
   });
 }
 
-export function verifyToken(token: string): TokenPayload {
+export function verifyToken(token: string): VerifiedToken {
   let decoded: string | jwt.JwtPayload;
 
   try {
@@ -40,5 +44,10 @@ export function verifyToken(token: string): TokenPayload {
     throw new UnauthorizedError("Invalid token payload");
   }
 
-  return { uid: decoded.uid, role: decoded.role };
+  return {
+    uid: decoded.uid,
+    role: decoded.role,
+    kind: decoded.kind === "web" ? "web" : "app",
+    issuedAt: typeof decoded.iat === "number" ? decoded.iat : 0,
+  };
 }

@@ -92,8 +92,8 @@ export type LaunchSession = {
 
 export async function exchangeLaunchCode(code: string): Promise<LaunchSession> {
   const result = await postJson("/marketplace/bridge/session", {
-    app_id: requireEnv("WASAA_APP_ID"),
-    app_secret: requireEnv("WASAA_APP_SECRET"),
+    app_id: requireEnv("WASAACHAT_CLIENT_ID"),
+    app_secret: requireEnv("WASAACHAT_CODE_2_SESSION"),
     code,
   });
 
@@ -109,8 +109,8 @@ export async function verifyPaymentIntent(
   intentId: string,
 ): Promise<WasaaPaymentIntent> {
   const result = await postJson("/marketplace/bridge/payments/verify", {
-    app_id: requireEnv("WASAA_APP_ID"),
-    app_secret: requireEnv("WASAA_APP_SECRET"),
+    app_id: requireEnv("WASAACHAT_CLIENT_ID"),
+    app_secret: requireEnv("WASAACHAT_CODE_2_SESSION"),
     intent_id: intentId,
   });
 
@@ -412,7 +412,7 @@ export async function handleWebhook(input: {
   signature?: string;
   deliveryHeader?: string;
 }) {
-  const secret = requireEnv("WASAA_WEBHOOK_SECRET");
+  const secret = requireEnv("WASAACHAT_PAYOUT_SIGNING_SECRET");
 
   if (!verifyWasaSignature(input.rawBody, input.signature, secret)) {
     throw new AppError(400, "Invalid webhook signature");

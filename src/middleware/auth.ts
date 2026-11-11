@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { ForbiddenError, UnauthorizedError } from "../utils/errors.ts";
+import * as userRepository from "../repositories/user.repository.ts";
 import { readCookie } from "../utils/cookies.ts";
 import { verifyToken } from "../utils/token.ts";
 
@@ -7,7 +8,7 @@ import { verifyToken } from "../utils/token.ts";
 // inside the WasaaChat app the page sends it as a Bearer token instead.
 const SESSION_COOKIE = "viva_session";
 
-export function requireAuth(req: Request, _res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
   try {
     const header = req.headers.authorization;
     const token = header?.startsWith("Bearer ") ? header.slice(7) : readCookie(req, SESSION_COOKIE);
@@ -17,6 +18,16 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
     }
 
     const payload = verifyToken(token);
+
+    // A web session dies when the user disconnects the app in WasaaChat
+    // (deauthorize webhook). In-app sessions end with the WasaaChat session.
+    if (payload.kind === "web") {
+      const revokedAt = await userRepository.findWebSessionsRevokedAt(payload.uid);
+      if (revokedAt && payload.issuedAt * 1000 <= revokedAt.getTime()) {
+        throw new UnauthorizedError("Your WasaaChat connection was removed. Please sign in again.");
+      }
+    }
+
     req.user = { id: payload.uid, role: payload.role };
     next();
   } catch (err) {

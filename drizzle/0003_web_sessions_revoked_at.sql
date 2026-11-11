@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `web_sessions_revoked_at` timestamp;

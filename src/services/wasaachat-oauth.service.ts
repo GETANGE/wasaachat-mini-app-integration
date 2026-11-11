@@ -33,8 +33,8 @@ const issuer = () => `${apiBase()}/identity/oauth`;
 
 function oauthConfig() {
   return {
-    clientId: env("WASAA_APP_ID"),
-    clientSecret: env("WASAA_APP_SECRET"),
+    clientId: env("WASAACHAT_CLIENT_ID"),
+    clientSecret: env("WASAACHAT_CODE_2_SESSION"),
     redirectUri: env("WASAA_OAUTH_REDIRECT_URI"),
     authorizeUrl: process.env.WASAA_OAUTH_AUTHORIZE_URL ?? DEFAULT_AUTHORIZE_URL,
   };
@@ -182,6 +182,6 @@ export async function finishSignIn(query: Record<string, unknown>, stateCookie: 
   return {
     user,
     returnTo: pending.returnTo,
-    sessionToken: signToken({ uid: user.id, role: user.role }, WEB_SESSION_SECONDS),
+    sessionToken: signToken({ uid: user.id, role: user.role, kind: "web" }, WEB_SESSION_SECONDS),
   };
 }

@@ -26,6 +26,9 @@ export const users = mysqlTable("users", {
   role: mysqlEnum("role", ["customer", "admin"]).default("customer").notNull(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   wasaaOpenUserId: varchar("wasaa_open_user_id", { length: 64 }).unique(),
+  // Set by WasaaChat's deauthorize webhook: web sign-in sessions issued
+  // before this moment are no longer accepted.
+  webSessionsRevokedAt: timestamp("web_sessions_revoked_at"),
   ...timestamps,
 });
 
