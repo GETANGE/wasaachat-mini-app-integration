@@ -78,6 +78,7 @@ function installMockContent() {
 const cart = new Map();
 const orders = [];
 const intents = new Map();
+let mockUser = null; // stands in for the session cookie
 
 const money = (n) => n.toFixed(2);
 const shipping = (subtotal) => (subtotal <= 0 ? 0 : subtotal >= 5000 ? 0 : 500);
@@ -107,7 +108,13 @@ async function handle(method, path, body) {
   // code2Session, as the real backend does it (any non-empty launch code works here).
   if (path === "/api/wasaa/session") {
     if (!body?.code) return fail(400, "code: Required");
-    return ok({ user: { id: 1, name: "Amina Wanjiru" }, scopes: [...grantedScopes()], accessToken: "mock", expiresIn: 3600 });
+    mockUser = { id: 1, name: "Amina Wanjiru" };
+    return ok({ user: mockUser, scopes: [...grantedScopes()], accessToken: "mock", expiresIn: 3600 });
+  }
+  if (path === "/api/wasaa/me") return ok({ user: mockUser, session: mockUser ? "app" : null });
+  if (path === "/api/wasaa/logout") {
+    mockUser = null;
+    return new Response(null, { status: 204 });
   }
   if (parts[0] === "categories") return ok({ categories });
 

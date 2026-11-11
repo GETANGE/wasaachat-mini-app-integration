@@ -149,5 +149,16 @@ describe("routes", () => {
     const res = await fetch(`${base}/api/wasaa/logout`, { method: "POST" });
     expect(res.status).toBe(204);
     expect(res.headers.get("set-cookie")).toContain("viva_session=;");
+    expect(res.headers.get("set-cookie")).toMatch(/viva_app_session=;[^,]*SameSite=None; Secure; Partitioned/);
+  });
+
+  test("an in-app session cookie signs requests in", async () => {
+    const { signToken } = await import("../../src/utils/token.ts");
+    const token = signToken({ uid: 1, role: "customer", kind: "app" }, 3600);
+    // /api/orders needs a session: without one it's 401, with the cookie it gets past auth.
+    const anonymous = await fetch(`${base}/api/orders`);
+    expect(anonymous.status).toBe(401);
+    const res = await fetch(`${base}/api/orders`, { headers: { cookie: `viva_app_session=${token}` } });
+    expect(res.status).not.toBe(401);
   });
 });

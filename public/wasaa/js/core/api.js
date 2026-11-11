@@ -14,8 +14,10 @@ export class ApiError extends Error {
   }
 }
 
-// In-app sessions carry a Bearer token; web sessions use an HttpOnly cookie
-// the page never sees ({ web: true }).
+// Sessions live in HttpOnly cookies the page never sees: viva_app_session
+// inside WasaaChat, viva_session on the web. Only if the browser refuses the
+// in-app cookie (some block cookies in WasaaChat's frame) does the page keep
+// the token in memory and send it as a Bearer header ({ accessToken }).
 export function setSession(session) {
   accessToken = session?.accessToken ?? null;
   signedIn = Boolean(session);
@@ -23,6 +25,7 @@ export function setSession(session) {
 
 async function sendRequest(path, options) {
   const response = await fetch(`${API_BASE}${path}`, {
+    credentials: "same-origin", // send the session cookie
     ...options,
     headers: {
       "content-type": "application/json",
@@ -75,7 +78,7 @@ const json = (method, body) => ({ method, body: body === undefined ? undefined :
 export const api = {
   // code2Session: exchange wasaa.launchCode for a shop session.
   session: (code) => apiFetch("/wasaa/session", json("POST", { code })),
-  // Web: who is signed in via the Sign in with WasaaChat cookie, and sign out.
+  // Who is signed in, and how ({ user, session: "app" | "web" | null }); sign out.
   me: () => apiFetch("/wasaa/me"),
   logout: () => apiFetch("/wasaa/logout", json("POST")).catch(() => null),
 

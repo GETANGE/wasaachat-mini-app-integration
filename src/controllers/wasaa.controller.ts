@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
 import { BadRequestError } from "../utils/errors.ts";
+import { setCookie } from "../utils/cookies.ts";
+import { APP_SESSION_COOKIE, APP_SESSION_COOKIE_OPTIONS } from "../services/session.service.ts";
 import { handleDeauthorize } from "../services/wasaachat-deauthorize.service.ts";
 import {
   handleWebhook,
@@ -8,6 +10,13 @@ import {
 
 export async function session(req: Request, res: Response) {
   const result = await loginWithLaunchCode(req.body.code);
+  // The session cookie, as in https://wasaachat.com/developers/launch-codes.
+  // The token is also returned only so the page can fall back to a Bearer
+  // header if the browser refuses cookies in WasaaChat's frame.
+  setCookie(req, res, APP_SESSION_COOKIE, result.accessToken, {
+    ...APP_SESSION_COOKIE_OPTIONS,
+    maxAgeSeconds: result.expiresIn,
+  });
   res.json(result);
 }
 

@@ -29,17 +29,23 @@ const closeShop = { label: "Close shop", run: () => closeApp() };
 // code2Session (https://wasaachat.com/developers/launch-codes): the page sends
 // wasaa.launchCode to our backend, which exchanges it with the app secret.
 // Permissions were already granted by the user when they installed the app.
+// The backend answers with an HttpOnly session cookie, as in WasaaChat's
+// examples. If the browser refused it (some block cookies in WasaaChat's
+// frame), fall back to sending the token as a Bearer header.
 async function signInInApp() {
   const session = await api.session(launchCode());
-  setSession(session);
+  const check = await api.me().catch(() => null);
+  const cookieWorks = check?.session === "app" && check.user?.id === session.user.id;
+  setSession(cookieWorks ? { cookie: true } : { accessToken: session.accessToken });
   return session.user;
 }
 
 // Web: is there a Sign in with WasaaChat session cookie already?
+// (An in-app session isn't reused: each launch signs in with its launch code.)
 async function existingWebSession() {
   try {
-    const { user } = await api.me();
-    if (!user) return null;
+    const { user, session } = await api.me();
+    if (!user || session !== "web") return null;
     setSession({ web: true });
     return user;
   } catch {

@@ -9,6 +9,12 @@ import { signToken } from "../utils/token.ts";
 
 const MAX_SESSION_SECONDS = 60 * 60; // bridge sessions last one hour
 
+// As in WasaaChat's launch-code examples, the in-app session lives in an
+// HttpOnly cookie. The app runs in WasaaChat's frame, so it is SameSite=None,
+// Secure and Partitioned. Separate from the web cookie (viva_session).
+export const APP_SESSION_COOKIE = "viva_app_session";
+export const APP_SESSION_COOKIE_OPTIONS = { sameSite: "None", partitioned: true } as const;
+
 type SessionUser = {
   id: number;
   role: "customer" | "admin";

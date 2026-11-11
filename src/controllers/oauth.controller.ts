@@ -11,6 +11,7 @@ import {
   STATE_TTL_SECONDS,
   WEB_SESSION_SECONDS,
 } from "../services/wasaachat-oauth.service.ts";
+import { APP_SESSION_COOKIE, APP_SESSION_COOKIE_OPTIONS } from "../services/session.service.ts";
 import { clearCookie, readCookie, setCookie } from "../utils/cookies.ts";
 
 // GET /auth/wasaachat?returnTo=/wasaa/
@@ -53,15 +54,16 @@ export async function callback(req: Request, res: Response, _next: NextFunction)
   }
 }
 
-// GET /api/wasaa/me — who is signed in (web cookie or in-app session).
-// { user: null } when nobody is; that's not an error.
+// GET /api/wasaa/me — who is signed in, and how: session "app" (launch code)
+// or "web" (Sign in with WasaaChat). { user: null } when nobody is; not an error.
 export async function me(req: Request, res: Response) {
   const user = req.user ? await userRepository.findPublicById(req.user.id) : null;
-  res.json({ user: user ?? null });
+  res.json({ user: user ?? null, session: user ? (req.user?.kind ?? null) : null });
 }
 
-// POST /api/wasaa/logout — ends the web session on this browser.
+// POST /api/wasaa/logout — ends this browser's session (in-app and web).
 export function logout(req: Request, res: Response) {
   clearCookie(req, res, SESSION_COOKIE);
+  clearCookie(req, res, APP_SESSION_COOKIE, "/", APP_SESSION_COOKIE_OPTIONS);
   res.status(204).end();
 }

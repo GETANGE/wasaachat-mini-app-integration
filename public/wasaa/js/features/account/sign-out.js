@@ -13,7 +13,7 @@ import { replaceWishlist } from "../wishlist/wishlist-store.js";
 async function signOut() {
   closeSheet();
   const wasWeb = state.mode === "web";
-  if (wasWeb) await api.logout(); // clears the HttpOnly session cookie
+  await api.logout(); // clears the HttpOnly session cookies
   setSession(null);
   state.mode = null;
   state.user = null;

@@ -1,18 +1,21 @@
 import type { NextFunction, Request, Response } from "express";
 import { ForbiddenError, UnauthorizedError } from "../utils/errors.ts";
 import * as userRepository from "../repositories/user.repository.ts";
+import { APP_SESSION_COOKIE } from "../services/session.service.ts";
 import { readCookie } from "../utils/cookies.ts";
 import { verifyToken } from "../utils/token.ts";
 
-// Web sign-in (Sign in with WasaaChat) keeps the session in this HttpOnly cookie;
-// inside the WasaaChat app the page sends it as a Bearer token instead.
+// Web sign-in (Sign in with WasaaChat) keeps the session in this HttpOnly cookie.
 const SESSION_COOKIE = "viva_session";
 
-// Reads the session from the Bearer header (in-app) or the cookie (web).
+// Reads the session from, in order: a Bearer header (in-app fallback when the
+// browser blocks the frame's cookie), the in-app cookie, the web cookie.
 // Throws UnauthorizedError when there is none or it is no longer valid.
 async function resolveSessionUser(req: Request) {
   const header = req.headers.authorization;
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : readCookie(req, SESSION_COOKIE);
+  const token = header?.startsWith("Bearer ")
+    ? header.slice(7)
+    : (readCookie(req, APP_SESSION_COOKIE) ?? readCookie(req, SESSION_COOKIE));
 
   if (!token) {
     throw new UnauthorizedError("Missing bearer token");
@@ -29,7 +32,7 @@ async function resolveSessionUser(req: Request) {
     }
   }
 
-  return { id: payload.uid, role: payload.role };
+  return { id: payload.uid, role: payload.role, kind: payload.kind };
 }
 
 export async function requireAuth(req: Request, _res: Response, next: NextFunction) {

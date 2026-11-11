@@ -100,7 +100,7 @@ describe("routes and sessions", () => {
   test("/api/wasaa/me with no session is a normal answer, not a 401", async () => {
     const res = await fetch(`${base}/api/wasaa/me`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ user: null });
+    expect(await res.json()).toEqual({ user: null, session: null });
   });
 });
 
