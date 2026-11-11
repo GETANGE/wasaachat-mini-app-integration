@@ -17,7 +17,7 @@ type SessionUser = {
 export function issueSession(user: SessionUser, bridgeExpiresIn: number) {
   const expiresIn = Math.max(60, Math.min(Math.floor(bridgeExpiresIn) || MAX_SESSION_SECONDS, MAX_SESSION_SECONDS));
   return {
-    accessToken: signToken({ uid: user.id, role: user.role }, expiresIn),
+    accessToken: signToken({ uid: user.id, role: user.role, kind: "app" }, expiresIn),
     expiresIn,
   };
 }

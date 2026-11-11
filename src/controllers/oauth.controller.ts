@@ -19,7 +19,7 @@ export function start(req: Request, res: Response) {
   try {
     started = startSignIn(req.query.returnTo);
   } catch (err) {
-    // Missing WASAA_APP_ID / WASAA_APP_SECRET / WASAA_OAUTH_REDIRECT_URI.
+    // Missing WASAACHAT_CLIENT_ID / WASAACHAT_CODE_2_SESSION / WASAA_OAUTH_REDIRECT_URI.
     logger.error("Sign in with WasaaChat is not configured", { error: err instanceof Error ? err.message : String(err) });
     res.redirect(302, "/wasaa/?signin=unavailable");
     return;

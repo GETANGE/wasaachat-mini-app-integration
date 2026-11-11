@@ -110,6 +110,6 @@ export const content = {
     // External links: { label, href }. Empty lists are hidden.
     company: [],
     social: [], // { network: "facebook" | "instagram" | "x" | "youtube", href }
-    legal: [], // { label, href }
+    legal: [{ label: "Privacy Policy", href: "/privacy" }], // { label, href }
   },
 };

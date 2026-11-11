@@ -17,8 +17,8 @@ beforeEach(() => {
   calls = [];
   process.env.JWT_SECRET = "test-secret";
   process.env.WASAA_BASE = "https://api.example.test/core";
-  process.env.WASAA_APP_ID = "app-123";
-  process.env.WASAA_APP_SECRET = "secret-xyz";
+  process.env.WASAACHAT_CLIENT_ID = "app-123";
+  process.env.WASAACHAT_CODE_2_SESSION = "secret-xyz";
   process.env.WASAA_OAUTH_REDIRECT_URI = "http://localhost:3000/auth/wasaachat/callback";
   delete process.env.WASAA_OAUTH_AUTHORIZE_URL;
 });

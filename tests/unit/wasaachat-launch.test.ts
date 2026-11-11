@@ -16,8 +16,8 @@ function mockFetch(status: number, body: unknown) {
 beforeEach(() => {
   calls = [];
   process.env.WASAA_BASE = "https://api.example.test/core";
-  process.env.WASAA_APP_ID = "app-123";
-  process.env.WASAA_APP_SECRET = "secret-xyz";
+  process.env.WASAACHAT_CLIENT_ID = "app-123";
+  process.env.WASAACHAT_CODE_2_SESSION = "secret-xyz";
   process.env.JWT_SECRET = "test-secret";
 });
 
@@ -62,6 +62,6 @@ describe("Shop session", () => {
     expect(issueSession(user, 1800).expiresIn).toBe(1800);
     expect(issueSession(user, 999_999).expiresIn).toBe(3600);
     const { accessToken } = issueSession(user, 3600);
-    expect(verifyToken(accessToken)).toEqual({ uid: 7, role: "customer" });
+    expect(verifyToken(accessToken)).toMatchObject({ uid: 7, role: "customer", kind: "app" });
   });
 });
