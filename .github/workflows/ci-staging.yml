@@ -1,0 +1,276 @@
+# =============================================================================
+# WASAACHAT MINI-APP (VIVA storefront) — STAGING CI/CD
+# =============================================================================
+# Adapted from Devops-templates/templates/ci-staging.yml for a personal-account
+# repo (GETANGE). Differences from the universal template:
+#   - runs-on: ubuntu-latest (wasaa-org-runners are org-scoped)
+#   - images push to ghcr.io/getange/<repo>
+#   - one image, two Argo tiles: the api chart and the worker chart are both
+#     bumped (repository + tag) and both apps are synced
+#
+# Deploys to https://miniapp.wasaahost.com (ventures staging, ns wasaachat-miniapp).
+#
+# Required repo secrets:
+#   HELM_CHARTS_DEPLOY_KEY — SSH private key; its public half is a WRITE deploy
+#                            key on web-masters-ke/Ventures-Helm-Charts
+#   ARGOCD_TOKEN           — argocd.wasaachat.com API token
+# The GHCR package must be readable by the cluster: make
+# ghcr.io/getange/wasaachat-mini-app-integration public (the repo already is).
+# =============================================================================
+
+name: CI - Staging
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+env:
+  ENVIRONMENT: staging
+  REGISTRY: ghcr.io
+  ORG: getange
+  SERVICE_NAME: ${{ github.event.repository.name }}
+  HELM_REPO: web-masters-ke/Ventures-Helm-Charts
+  HELM_BRANCH: staging
+  ARGOCD_URL: https://argocd.wasaachat.com
+  # chart path => values key holding the image
+  HELM_TARGETS: |
+    charts/wasaachat-miniapp=api
+    charts/wasaachat-miniapp-worker=worker
+  ARGOCD_APPS: wasaachat-miniapp-staging wasaachat-miniapp-worker-staging
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
+
+  security-scan:
+    name: Security Scan
+    needs: build-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gitleaks (no-git, working tree)
+        run: |
+          GITLEAKS_VERSION="8.24.3"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /tmp
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          CONFIG_ARG=""
+          [ -f .gitleaks.toml ] && CONFIG_ARG="--config .gitleaks.toml"
+          gitleaks detect --no-git --source . \
+            --report-format json --report-path gitleaks-report.json \
+            --exit-code 1 --log-level warn $CONFIG_ARG
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs.sarif'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '0'
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-filesystem
+
+  build-push:
+    name: Build & Push Image
+    needs: security-scan
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version_tag: ${{ steps.version.outputs.tag }}
+      image: ${{ steps.version.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate version tag
+        id: version
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date +%Y%m%d%H%M)
+          TAG="${ENVIRONMENT}-${TIMESTAMP}-${SHA}"
+          IMAGE="${REGISTRY}/${ORG}/$(echo ${SERVICE_NAME} | tr '[:upper:]' '[:lower:]')"
+          echo "tag=${TAG}"   >> $GITHUB_OUTPUT
+          echo "image=${IMAGE}" >> $GITHUB_OUTPUT
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.version.outputs.image }}:${{ steps.version.outputs.tag }}
+            ${{ steps.version.outputs.image }}:latest-staging
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=registry,ref=${{ steps.version.outputs.image }}:buildcache
+          cache-to: type=registry,ref=${{ steps.version.outputs.image }}:buildcache,mode=max
+          provenance: false
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: '${{ steps.version.outputs.image }}:${{ steps.version.outputs.tag }}'
+          format: 'sarif'
+          output: 'trivy-image.sarif'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '0'
+          timeout: '10m'
+
+      - name: Upload Trivy image SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+  update-helm:
+    name: Update Helm Values
+    needs: build-push
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Fail loudly: a green run must mean the new image is deployed.
+      - name: Check deploy key
+        env:
+          HELM_CHARTS_DEPLOY_KEY: ${{ secrets.HELM_CHARTS_DEPLOY_KEY }}
+        run: |
+          if [ -z "$HELM_CHARTS_DEPLOY_KEY" ]; then
+            echo "::error title=Deploy blocked::HELM_CHARTS_DEPLOY_KEY is not set — image built but NOT deployed"
+            exit 1
+          fi
+
+      - name: Checkout Helm Charts
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.HELM_REPO }}
+          ref: ${{ env.HELM_BRANCH }}
+          ssh-key: ${{ secrets.HELM_CHARTS_DEPLOY_KEY }}
+          path: helm-charts
+
+      - name: Bump image repository + tag
+        env:
+          IMAGE: ${{ needs.build-push.outputs.image }}
+          TAG: ${{ needs.build-push.outputs.version_tag }}
+        run: |
+          echo "$HELM_TARGETS" | while IFS='=' read -r chart key; do
+            [ -z "$chart" ] && continue
+            values="helm-charts/${chart}/values.yaml"
+            [ -f "$values" ] || { echo "::error::$values not found"; exit 1; }
+            IMAGE="$IMAGE" TAG="$TAG" yq -i ".${key}.image.repository = strenv(IMAGE) | .${key}.image.tag = strenv(TAG)" "$values"
+            echo "$values → $(yq ".${key}.image.repository + \":\" + .${key}.image.tag" "$values")"
+          done
+
+      - name: Commit & push
+        env:
+          TAG: ${{ needs.build-push.outputs.version_tag }}
+        run: |
+          cd helm-charts
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add charts/wasaachat-miniapp/values.yaml charts/wasaachat-miniapp-worker/values.yaml
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "ci(staging): bump wasaachat-miniapp → ${TAG}
+
+          Source: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          Triggered by: ${{ github.actor }}"
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin "$HELM_BRANCH" && git push origin "$HELM_BRANCH" && exit 0
+            echo "push retry $i"; sleep $((i * 5))
+          done
+          echo "::error::could not push the chart bump"
+          exit 1
+
+  trigger-argocd:
+    name: Trigger ArgoCD Sync
+    needs: update-helm
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Sync and wait for healthy
+        env:
+          ARGOCD_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
+        run: |
+          if [ -z "$ARGOCD_TOKEN" ]; then
+            echo "::warning::ARGOCD_TOKEN not set — Argo auto-sync will pick the bump up within ~3 min"
+            exit 0
+          fi
+          for app in $ARGOCD_APPS; do
+            code=$(curl -s -o /tmp/r.json -w "%{http_code}" \
+              -X POST "${ARGOCD_URL}/api/v1/applications/${app}/sync" \
+              -H "Authorization: Bearer ${ARGOCD_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '{"prune":true,"retry":{"limit":3,"backoff":{"duration":"5s","factor":2,"maxDuration":"3m"}}}')
+            echo "$app sync → HTTP $code"
+            [ "$code" = "200" ] || cat /tmp/r.json
+          done
+          for app in $ARGOCD_APPS; do
+            for i in $(seq 1 20); do
+              r=$(curl -sf "${ARGOCD_URL}/api/v1/applications/${app}" -H "Authorization: Bearer ${ARGOCD_TOKEN}" || echo '{}')
+              sync=$(echo "$r" | jq -r '.status.sync.status // "Unknown"')
+              health=$(echo "$r" | jq -r '.status.health.status // "Unknown"')
+              echo "[$app] sync=$sync health=$health"
+              [ "$sync" = "Synced" ] && [ "$health" = "Healthy" ] && continue 2
+              sleep 15
+            done
+            echo "::error::$app did not become Synced/Healthy"
+            exit 1
+          done
