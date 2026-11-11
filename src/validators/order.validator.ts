@@ -24,3 +24,8 @@ export const updateOrderStatusSchema = z.object({
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+// POST /api/orders/:id/payment/confirm — the intent id WasaaChat returned.
+export const confirmPaymentSchema = z.object({
+  intentId: z.string().trim().min(1).max(128),
+});

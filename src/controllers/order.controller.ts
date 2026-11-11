@@ -7,6 +7,7 @@ import {
   prepareWasaPayment,
   updateOrderStatus,
 } from "../services/order.service.ts";
+import { confirmOrderPayment } from "../services/wasaachat.service.ts";
 import { parseId } from "../utils/parse.ts";
 
 export async function create(req: Request, res: Response) {
@@ -40,4 +41,9 @@ export async function preparePayment(req: Request, res: Response) {
 export async function setStatus(req: Request, res: Response) {
   const order = await updateOrderStatus(parseId(req.params.id), req.body.status);
   res.json({ order });
+}
+
+export async function confirmPayment(req: Request, res: Response) {
+  const result = await confirmOrderPayment(req.user!.id, parseId(req.params.id), req.body.intentId);
+  res.json(result);
 }

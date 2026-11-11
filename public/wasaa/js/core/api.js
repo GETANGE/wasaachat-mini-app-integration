@@ -97,5 +97,7 @@ export const api = {
   order: (id) => apiFetch(`/orders/${id}`),
   checkout: (shippingAddress) => apiFetch("/orders/checkout", json("POST", { shippingAddress })),
   preparePayment: (orderId) => apiFetch(`/orders/${orderId}/payment`, json("POST")),
+  // Asks the backend to verify the payment with WasaaChat and confirm the order.
+  confirmPayment: (orderId, intentId) => apiFetch(`/orders/${orderId}/payment/confirm`, json("POST", { intentId })),
   cancelOrder: (orderId) => apiFetch(`/orders/${orderId}/cancel`, json("POST")),
 };

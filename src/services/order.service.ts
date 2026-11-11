@@ -5,7 +5,7 @@ import * as cartRepository from "../repositories/cart.repository.ts";
 import * as orderRepository from "../repositories/order.repository.ts";
 import * as productRepository from "../repositories/product.repository.ts";
 import { BadRequestError, ConflictError, NotFoundError } from "../utils/errors.ts";
-import { fromCents, shippingFor, toCents } from "../utils/money.ts";
+import { exceedsWasaaPaymentLimit, fromCents, shippingFor, toCents } from "../utils/money.ts";
 import { invalidateProducts } from "../cache/index.ts";
 import * as userRepository from "../repositories/user.repository.ts";
 import {
@@ -75,6 +75,13 @@ export async function checkout(userId: number, shippingAddress: ShippingAddress)
 
     const shippingFeeCents = shippingFor(subtotalCents);
     const totalCents = subtotalCents + shippingFeeCents;
+
+    // Checked before the order exists, so no stock is held for an order that can't be paid.
+    if (exceedsWasaaPaymentLimit(totalCents)) {
+      throw new BadRequestError(
+        "WasaaChat payments are limited to KES 100,000 per order. Remove some items or split them into separate orders.",
+      );
+    }
 
     const orderId = await orderRepository.insertOrder(
       {
@@ -210,6 +217,13 @@ export async function prepareWasaPayment(userId: number, orderId: number) {
       throw new ConflictError("Order is not awaiting payment");
     }
 
+    if (exceedsWasaaPaymentLimit(toCents(order.total))) {
+      throw new ConflictError("WasaaChat payments are limited to KES 100,000 per order.");
+    }
+
+    // A new reference per attempt: WasaaChat treats a reference as one purchase
+    // forever, so a declined attempt can only be retried with a fresh one.
+    // Earlier attempts stay traceable through the order id inside it.
     const reference = `order-${order.id}-${randomBytes(6).toString("hex")}`;
     await orderRepository.updatePaymentReference(order.id, reference, tx);
 
@@ -218,7 +232,7 @@ export async function prepareWasaPayment(userId: number, orderId: number) {
       reference,
       amount: order.total,
       currency: "KES",
-      description: `Order #${order.id}`.slice(0, 140),
+      description: `VIVA order #${order.id}`.slice(0, 140),
     };
   });
 }

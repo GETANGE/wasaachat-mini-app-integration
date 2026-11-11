@@ -7,8 +7,9 @@ import * as userRepository from "../repositories/user.repository.ts";
 import * as webhookDeliveryRepository from "../repositories/webhook-delivery.repository.ts";
 import { enqueuePaymentReceipt } from "../queues/index.ts";
 import { issueSession } from "./session.service.ts";
-import { AppError, UnauthorizedError } from "../utils/errors.ts";
+import { AppError, BadRequestError, NotFoundError, UnauthorizedError } from "../utils/errors.ts";
 import { toCents } from "../utils/money.ts";
+import type { Transaction } from "../repositories/types.ts";
 
 const DEFAULT_BASE = "https://api.wasaachat.com/api/v1/core";
 
@@ -238,15 +239,34 @@ function isDuplicateKeyError(err: unknown): boolean {
   );
 }
 
+// References are "order-<order id>-<random>", a new one per payment attempt
+// (see prepareWasaPayment). An order stores only its latest reference, so an
+// earlier attempt that still completes is matched by the order id inside it.
+export function orderIdFromReference(reference: unknown): number | null {
+  const match = typeof reference === "string" ? /^order-(\d+)-[0-9a-f]+$/.exec(reference) : null;
+  return match ? Number(match[1]) : null;
+}
+
+async function findOrderForReferenceForUpdate(tx: Transaction, reference: string) {
+  const byReference = await orderRepository.findByPaymentReferenceForUpdate(tx, reference);
+  if (byReference) return byReference;
+  const id = orderIdFromReference(reference);
+  return id ? orderRepository.findByIdForUpdate(tx, id) : undefined;
+}
+
+async function findOrderForReference(reference: string) {
+  const byReference = await orderRepository.findByPaymentReference(reference);
+  if (byReference) return byReference;
+  const id = orderIdFromReference(reference);
+  return id ? orderRepository.findById(id) : undefined;
+}
+
 async function fulfilPaidIntent(intent: WasaaPaymentIntent) {
   const result = await db.transaction(async (tx) => {
-    const order = await orderRepository.findByPaymentReferenceForUpdate(
-      tx,
-      intent.reference,
-    );
+    const order = await findOrderForReferenceForUpdate(tx, intent.reference);
 
     if (!order) {
-      logger.warn("Paid intent has no matching order", {
+      logger.error("Paid intent has no matching order — money received, refund or match it manually", {
         intentId: intent.intent_id,
         reference: intent.reference,
       });
@@ -267,16 +287,28 @@ async function fulfilPaidIntent(intent: WasaaPaymentIntent) {
       return { orderId: order.id, userId: order.userId, newlyPaid: false };
     }
 
-    const newlyPaid = order.status !== "paid";
-
-    if (newlyPaid) {
-      await orderRepository.updateStatus(order.id, "paid", tx);
-    }
-
     const existing = await paymentRepository.findByProviderRef(
       intent.intent_id,
       tx,
     );
+
+    // Only a pending order becomes paid. A payment for an order that was
+    // already paid by another attempt, or cancelled meanwhile (stock already
+    // released), is recorded and flagged for a refund instead.
+    const newlyPaid = order.status === "pending";
+    const alreadyCounted = existing?.status === "paid";
+
+    if (newlyPaid) {
+      await orderRepository.updateStatus(order.id, "paid", tx);
+    } else if (!alreadyCounted) {
+      logger.error("Extra payment for an order that is not awaiting payment — refund needed", {
+        orderId: order.id,
+        orderStatus: order.status,
+        intentId: intent.intent_id,
+        reference: intent.reference,
+        amount: intent.amount,
+      });
+    }
 
     if (existing) {
       if (existing.status !== "paid") {
@@ -318,10 +350,7 @@ async function refundIntent(intent: WasaaPaymentIntent) {
   const refundedAmount = intent.refunded_amount ?? intent.amount;
 
   return db.transaction(async (tx) => {
-    const order = await orderRepository.findByPaymentReferenceForUpdate(
-      tx,
-      intent.reference,
-    );
+    const order = await findOrderForReferenceForUpdate(tx, intent.reference);
 
     if (!order) {
       logger.warn("Refunded intent has no matching order", {
@@ -384,7 +413,7 @@ async function recordFailedAttempt(
 
   const reference = typeof data.reference === "string" ? data.reference : null;
   const order = reference
-    ? await orderRepository.findByPaymentReference(reference)
+    ? await findOrderForReference(reference)
     : undefined;
 
   if (!order) {
@@ -504,4 +533,24 @@ export async function handleWebhook(input: {
       throw err;
     }
   }
+}
+
+// Called by the page when WasaaChat reports a payment as paid, so the order is
+// confirmed even if the webhook is late or lost. Trusts only WasaaChat's own
+// answer (payments/verify with the app secret), never the page.
+export async function confirmOrderPayment(userId: number, orderId: number, intentId: string) {
+  const order = await orderRepository.findByIdForUser(userId, orderId);
+  if (!order) throw new NotFoundError("Order not found");
+
+  const intent = await verifyPaymentIntent(intentId);
+  if (orderIdFromReference(intent.reference) !== order.id) {
+    throw new BadRequestError("That payment is not for this order");
+  }
+
+  if (intent.status === "paid") {
+    await fulfilPaidIntent(intent);
+  }
+
+  const updated = await orderRepository.findByIdForUser(userId, orderId);
+  return { paymentStatus: intent.status, orderStatus: updated?.status ?? order.status };
 }

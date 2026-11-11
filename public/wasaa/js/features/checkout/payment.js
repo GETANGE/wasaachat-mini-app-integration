@@ -77,6 +77,12 @@ export async function payForOrder(order) {
   // If the shopper closed the sheet while we polled, tell them via a toast instead.
   const visible = isSheetOpen(token);
 
+  // Don't rely on the webhook alone: have the backend verify with WasaaChat and
+  // confirm the order now. If this fails, the webhook still will.
+  if (status === "paid") {
+    api.confirmPayment(order.id, intentId).catch(() => {});
+  }
+
   switch (status) {
     case "paid":
       show(payStatus({ tone: "ok", icon: icons.check(), amount, title: "Payment received", detail: `Order #${order.id} is confirmed. We’ll let you know when it ships.`, step: 3 }), single("View my orders", viewOrders));

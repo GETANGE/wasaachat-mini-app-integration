@@ -166,10 +166,13 @@ async function handle(method, path, body) {
     const order = orders.find((o) => o.id === Number(parts[1]));
     if (!parts[1]) return ok({ orders });
     if (!order) return fail(404, "Order not found");
-    if (parts[2] === "payment") {
+    if (parts[2] === "payment" && !parts[3]) {
       if (order.status !== "pending") return fail(409, "Order is not awaiting payment");
       order.paymentReference = `order-${order.id}-${Math.random().toString(16).slice(2, 14)}`;
       return ok({ orderId: order.id, reference: order.paymentReference, amount: order.total, currency: "KES", description: `Order #${order.id}` }, 201);
+    }
+    if (parts[2] === "payment" && parts[3] === "confirm") {
+      return ok({ paymentStatus: order.status === "paid" ? "paid" : "pending", orderStatus: order.status });
     }
     if (parts[2] === "cancel") {
       if (order.status !== "pending") return fail(409, "Only pending orders can be cancelled");

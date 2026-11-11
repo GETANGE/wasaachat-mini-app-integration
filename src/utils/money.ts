@@ -22,3 +22,9 @@ export function shippingFor(subtotalCents: number): number {
     ? 0
     : SHIPPING_FEE_CENTS;
 }
+
+// WasaaChat Pay accepts at most KES 100,000.00 per payment intent.
+// https://wasaachat.com/developers/payments
+export const MAX_WASAA_PAYMENT_CENTS = 10_000_000;
+
+export const exceedsWasaaPaymentLimit = (totalCents: number) => totalCents > MAX_WASAA_PAYMENT_CENTS;
