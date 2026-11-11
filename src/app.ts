@@ -9,6 +9,11 @@ import { requestLogger } from "./middleware/requestLogger.ts";
 
 const app = express();
 
+// Behind Cloudflare: trust the one proxy hop in front of us so req.ip is the
+// visitor's address (X-Forwarded-For), not the tunnel's. Rate limiting and
+// request logs depend on it.
+app.set("trust proxy", 1);
+
 app.use(requestLogger);
 app.use(helmet({ frameguard: false }));
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? "*" }));

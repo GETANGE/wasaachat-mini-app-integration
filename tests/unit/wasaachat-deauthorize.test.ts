@@ -95,3 +95,18 @@ describe("routes and sessions", () => {
     expect(inApp.status).toBe(200);
   });
 });
+
+describe("opening a webhook URL in a browser", () => {
+  const server = app.listen(0);
+  const base = `http://localhost:${(server.address() as AddressInfo).port}`;
+  afterAll(() => server.close());
+
+  test("GET explains it's a POST-only webhook", async () => {
+    for (const path of ["/api/wasaa/deauthorize", "/api/wasaa/webhook"]) {
+      const res = await fetch(`${base}${path}`);
+      expect(res.status).toBe(405);
+      expect(res.headers.get("allow")).toBe("POST");
+      expect(((await res.json()) as { error: string }).error).toContain("only accepts signed POST");
+    }
+  });
+});
